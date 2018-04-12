@@ -105,6 +105,14 @@ Hyper-parameter prior distributions (subject to change):
 \alpha_\sigma, \alpha_\xi, \beta_\sigma, \beta_\xi &\sim N(0, 100)\\
 \end{align*}
 
+\section{Posterior distribution}
+
+The full posterior distribution is:
+\begin{align*}
+p(\tau_\xi, \omega_\sigma, \omega_\xi, \rho_\sigma, \rho_\xi, \alpha_\sigma, \alpha_\xi, \beta_\sigma, \beta_\xi, \tilde{\sigma}, \tilde{\xi} | y, x, z, \nu_\sigma, \nu_\xi) \propto &\left[ \prod_{i=1}^n \prod_{j=1}^m p(y_{ij} | \sigma(x_i), \xi(x_i)) \right] p(\tilde{\sigma}(x) | \mu, \omega_\sigma, \Sigma) \times \\
+& p(\tilde{\xi}(x) | \kappa, \omega_\xi, \Psi) p(\alpha_\sigma, \alpha_\xi, \beta_\sigma, \beta_\xi) p(\rho_\sigma, \rho_\xi) p(\tau_\sigma, \tau_\xi, \omega_\sigma, \omega_\xi)
+\end{align*}
+
 \end{document}
 
 
