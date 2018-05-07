@@ -47,10 +47,10 @@
  	
 	Number of iterations $N$\;
 
-\For{iterations $k$ from 1 to $N$}{
+\For{iterations $i$ from 1 to $N$}{
 	Generate $u \sim U(0, 1)$\;
-	\For{locations $i$ from 1 to $n$}{
-		Simulate $\tilde{\phi}_{new,i}$\;
+	\For{sub-grid locations $k$ from 1 to $m$}{
+		Simulate $\tilde{\phi}_{new,k}$\;
 		
 		Project $\phi_{new}$ from $\tilde{\phi}_{new}$\;
 		
@@ -62,7 +62,7 @@
 			Set $\tilde{\phi} = \tilde{\phi}_{new}$\;
 		}
 
-		Simulate $\tilde{\xi}_{new,i}$\;
+		Simulate $\tilde{\xi}_{new,k}$\;
 		
 		Project $\xi_{new}$ from $\tilde{\xi}_{new}$\;
 				
@@ -86,139 +86,56 @@
 \RestyleAlgo{boxruled}
 \begin{algorithm*}[H]
 
-\For{iterations $k$ from 1 to $N$}{
-	\For{covariates $c$ from 1 to $p+1$}{
+\For{iterations $i$ from 1 to $N$}{
+	\For{each element c of the vector $\alpha_\phi$}{
 	
 		Simulate ${\alpha_\phi}_{new,c}$\;
-		Set $l_{new}$ = log full conditional of new vector ${\alpha_\phi}_{new}$\;
-		Set $l_{old}$ = log full conditional of old vector $\alpha_\phi$\;
-		Set $a = \exp(l_{new} - l_{old} )$, that is, evaluate equation (\ref{eq:2a1})\;
-			\If{$a > u$}{
-				Set $\alpha_\phi = {\alpha_\phi}_{new}$\;
-			}
+		Set $a = $ result of equation (\ref{eq:2a1})\;
+		If $a > u$, set $\alpha_\phi = {\alpha_\phi}_{new}$\;
 
 	}
 	
-	\For{covariates $d$ from 1 to $q+1$}{
+	\For{each element d of the vector $\alpha_\xi$}{
 	
-		Simulate ${\alpha_\xi}_{new,d}$\;
-		Set $l_{new}$ = log full conditional of new vector ${\alpha_\xi}_{new}$\;
-		Set $l_{old}$ = log full conditional of old vector $\alpha_\xi$\;
-		Set $a = \exp(l_{new} - l_{old} )$, that is, evaluate equation (\ref{eq:2a2})\;
-			\If{$a > u$}{
-				Set $\alpha_\xi = {\alpha_\xi}_{new}$\;
-			}
-
+		As above, but set $a =$ result of equation (\ref{eq:2a2})\;
 	}
-
-}
-%\caption{Continued}
-\end{algorithm*}
-
-\RestyleAlgo{boxruled}
-\begin{algorithm*}[H]
-
-\For{iterations $k$ from 1 to $N$}{
-	\For{elements $c$ in the lower-triangle of the matrix $\beta_\phi$}{
+		\For{elements $e$ in the lower-triangle of the matrix $\beta_\phi$}{
 	
-		Simulate ${\beta_\phi}_{new,c}$\;
-		Set $l_{new}$ = log full conditional of new matrix ${\beta_\phi}_{new}$\;
-		Set $l_{old}$ = log full conditional of old matrix $\beta_\phi$\;
-		Set $a = \exp(l_{new} - l_{old} )$, that is, evaluate equation (\ref{eq:2b1})\;
-			\If{$a > u$}{
-				Set $\beta_\phi = {\beta_\phi}_{new}$\;
-			}
-
+		Simulate ${\beta_\phi}_{new,e}$\;
+		Set $a = $ result of equation (\ref{eq:2b1})\;
+		If $a > u$, set $\beta_\phi = {\beta_\phi}_{new}$\;
 	}
 	
-	\For{elements $d$ in the lower-triangle of the matrix $\beta_\xi$}{
+	\For{elements $f$ in the lower-triangle of the matrix $\beta_\xi$}{
 	
-		Simulate ${\beta_\xi}_{new,d}$\;
-		Set $l_{new}$ = log full conditional of new matrix ${\beta_\xi}_{new}$\;
-		Set $l_{old}$ = log full conditional of old matrix $\beta_\xi$\;
-		Set $a = \exp(l_{new} - l_{old} )$, that is, evaluate equation (\ref{eq:2b2})\;
-			\If{$a > u$}{
-				Set $\beta_\xi = {\beta_\xi}_{new}$\;
-			}
-
+		As above, but set $a = $ result of equation (\ref{eq:2b2})\;
 	}
-
-}
-%\caption{Continued}
-\end{algorithm*}
-
-\RestyleAlgo{boxruled}
-\begin{algorithm*}[H]
-
-\For{iterations $k$ from 1 to $N$}{
 	
-	Simulate ${\nu_\phi}_{new}$\;
-	Set $l_{new}$ = log full conditional of new value ${\nu_\phi}_{new}$\;
-	Set $l_{old}$ = log full conditional of old value $\nu_\phi$\;
-	Set $a = \exp(l_{new} - l_{old} )$, that is, evaluate equation (\ref{eq:2n1})\;
-		\If{$a > u$}{
-			Set $\nu_\phi = {\nu_\phi}_{new}$\;
-		}
+		Simulate ${\nu_\phi}_{new}$\;
+	Set $a =$ result of equation (\ref{eq:2n1})\;
+	If $a > u$, set $\nu_\phi = {\nu_\phi}_{new}$\;
 	
-	Simulate ${\nu_\xi}_{new}$\;
-	Set $l_{new}$ = log full conditional of new vector ${\nu_\xi}_{new}$\;
-	Set $l_{old}$ = log full conditional of old vector $\nu_\xi$\;
-	Set $a = \exp(l_{new} - l_{old} )$, that is, evaluate equation (\ref{eq:2n2})\;
-		\If{$a > u$}{
-			Set $\nu_\xi = {\nu_\xi}_{new}$\;
-		}
-}
-%\caption{Continued}
-\end{algorithm*}
-
-\RestyleAlgo{boxruled}
-\begin{algorithm*}[H]
-
-\For{iterations $k$ from 1 to $N$}{
+	Repeat for ${\nu_\xi}$ with equation (\ref{eq:2n2}) \;
 	
 	Simulate ${\varsigma^2_\phi}_{new}$\;
-	Set $l_{new}$ = log full conditional of new value ${\varsigma^2_\phi}_{new}$\;
-	Set $l_{old}$ = log full conditional of old value $\varsigma^2_\phi$\;
-	Set $a = \exp(l_{new} - l_{old} )$, that is, evaluate equation (\ref{eq:2vs1})\;
-		\If{$a > u$}{
-			Set $\varsigma^2_\phi = {\varsigma^2_\phi}_{new}$\;
-		}
-	
-	Simulate ${\varsigma^2_\xi}_{new}$\;
-	Set $l_{new}$ = log full conditional of new vector ${\varsigma^2_\xi}_{new}$\;
-	Set $l_{old}$ = log full conditional of old vector $\varsigma^2_\xi$\;
-	Set $a = \exp(l_{new} - l_{old} )$, that is, evaluate equation (\ref{eq:2vs2})\;
-		\If{$a > u$}{
-			Set $\varsigma^2_\xi = {\varsigma^2_\xi}_{new}$\;
-		}
-}
-%\caption{Continued}
-\end{algorithm*}
+	Set $a = $ result of equation (\ref{eq:2vs1})\;
+	If $a > u$, set $\varsigma^2_\phi = {\varsigma^2_\phi}_{new}$\;
 
-
-\RestyleAlgo{boxruled}
-\begin{algorithm*}[H]
-
-\For{iterations $k$ from 1 to $N$}{
+	Repeat for ${\varsigma^2_\xi}$ with equation (\ref{eq:2vs2}) \;
 	
 	Simulate ${\tau^2_\phi}_{new}$\;
-	Set $l_{new}$ = log full conditional of new value ${\tau^2_\phi}_{new}$\;
-	Set $l_{old}$ = log full conditional of old value $\tau^2_\phi$\;
-	Set $a = \exp(l_{new} - l_{old} )$, that is, evaluate equation (\ref{eq:2t1})\;
-		\If{$a > u$}{
-			Set $\tau^2_\phi = {\tau^2_\phi}_{new}$\;
-		}
+
+	Set $a = $ result of equation (\ref{eq:2t1})\;
+	If $a > u$, set $\tau^2_\phi = {\tau^2_\phi}_{new}$\;
 	
-	Simulate ${\tau^2_\xi}_{new}$\;
-	Set $l_{new}$ = log full conditional of new vector ${\tau^2_\xi}_{new}$\;
-	Set $l_{old}$ = log full conditional of old vector $\tau^2_\xi$\;
-	Set $a = \exp(l_{new} - l_{old} )$, that is, evaluate equation (\ref{eq:2t2})\;
-		\If{$a > u$}{
-			Set $\tau^2_\xi = {\tau^2_\xi}_{new}$\;
-		}
+	Repeat for ${\tau^2_\xi}$ with equation (\ref{eq:2t2}) \;
+
+
+
 }
 %\caption{Continued}
 \end{algorithm*}
+
 
 \newpage
 
@@ -258,8 +175,10 @@ A(x_i, z_k) &= \varsigma_\phi^2 \frac{2^{1-\nu_\phi}}{\Gamma(\nu_\phi)}\Bigg(\sq
 B(x_i, z_k) &= \varsigma_\xi^2 \frac{2^{1-\nu_\xi}}{\Gamma(\nu_\xi)}\Bigg(\sqrt{2\nu_\xi}\frac{\|x_i - z_k\|}{\beta_\xi}\Bigg)^{\nu_\xi} K_{\nu_\xi}\Bigg(\sqrt{2\nu_\xi}\frac{\|x_i - z_k\|}{\beta_\xi}\Bigg)\\
 \tilde{\phi} &\sim MVN_m(\mu_\phi(z), \tau_\phi^2 I_m + \Sigma(z, z))\\
 \tilde{\xi} &\sim MVN_m(\mu_\xi(z), \tau_\xi^2 I_m + \Psi(z, z))\\
-\mu_\phi(z) &= Z_\phi \alpha_\phi \\
-\mu_\xi(z) &= Z_\xi \alpha_\xi \\
+\mu_\phi (z) &= Z_\phi \alpha_\phi \\
+\mu_\xi (z) &= Z_\xi \alpha_\xi \\
+\mu_\phi(x) &= X_\phi \alpha_\phi \\
+\mu_\xi(x) &= X_\xi \alpha_\xi \\
 \Sigma(z_k, z_l) &= \varsigma_\phi^2 \frac{2^{1-\nu_\phi}}{\Gamma(\nu_\phi)}\Bigg(\sqrt{2\nu_\phi}\frac{\|z_k - z_l\|}{\beta_\phi}\Bigg)^{\nu_\phi} K_{\nu_\phi}\Bigg(\sqrt{2\nu_\phi}\frac{\|z_k - z_l\|}{\beta_\phi}\Bigg)\\
 \Psi(z_k, z_l) &= \varsigma_\xi^2 \frac{2^{1-\nu_\xi}}{\Gamma(\nu_\xi)}\Bigg(\sqrt{2\nu_\xi}\frac{\|z_k - z_l\|}{\beta_\xi}\Bigg)^{\nu_\xi} K_{\nu_\xi}\Bigg(\sqrt{2\nu_\xi}\frac{\|z_k - z_l\|}{\beta_\xi}\Bigg)
 \end{align*}
@@ -268,8 +187,10 @@ Hyper-parameter prior distributions (subject to change):
 \begin{align*}
 \log(\varsigma^2_\phi), \log(\varsigma^2_\xi), \log(\tau^2_\phi), \log(\tau^2_\xi) &\sim N(0, 10) \\
 \beta_\phi, \beta_\xi, \nu_\phi, \nu_\xi &\sim DU(0.001, 0.01, 0.1, 1, 10, 100, 1000)\\
-\alpha_\phi, \alpha_\xi &\sim N(0, 100)\\
+\alpha_\phi &\sim MVN(\vec{\eta}_\phi, H_\phi)\\
+\alpha_\xi &\sim MVN(\vec{\eta}_\xi, H_\xi)\\
 \end{align*}
+To begin, $\vec{\eta}_\phi$ and $\vec{\eta}_\xi$ are vectors of the appropriate length with all entries equal to 0. $H_\phi$ and $H_\xi$ are the relevant covariance matrices - to begin, these are diagonal matrices with 10 on the diagonal. The code is designed to allow the relationship between the coefficients to be modelled (if desired) by adjusting this covariance matrix.
 
 \section{Posterior distribution}
 
@@ -401,57 +322,55 @@ The full term we need to evaluate is:
 Updating the second layer of the DAG - that is, all hyper-parameters - starting with $\alpha_\phi$:
 
 \begin{align*}
-\pi(\alpha_\phi | y, x, z, X_\phi, X_\xi, Z_\phi, Z_\xi, & \alpha_\xi, \beta_\phi, \beta_\xi, \varsigma^2_\phi, \varsigma^2_\xi, \tau^2_\phi, \tau^2_\xi, \nu_\phi, \nu_\xi, \tilde{\phi}, \tilde{\xi}) \propto \\
-& p(y | \alpha_\phi, x, z, X_\phi, X_\xi, Z_\phi, Z_\xi, \alpha_\phi, \alpha_\xi, \beta_\phi, \beta_\xi, \varsigma^2_\phi, \varsigma^2_\xi, \tau^2_\phi, \tau^2_\xi, \nu_\phi, \nu_\xi, \tilde{\phi}, \tilde{\xi}) \times \\
-& p(\alpha_\phi | x, z, X_\phi, X_\xi, Z_\phi, Z_\xi, \alpha_\phi, \alpha_\xi, \beta_\phi, \beta_\xi, \varsigma^2_\phi, \varsigma^2_\xi, \tau^2_\phi, \tau^2_\xi, \nu_\phi, \nu_\xi, \tilde{\phi}, \tilde{\xi}) \\
+\pi(\alpha_\phi | y, \dots ) \propto & p(y | \alpha_\phi, \dots ) p(\alpha_\phi | \dots) \\
 \propto & p(y | \sigma, \xi)  p(\tilde{\phi} | \mu_\phi, \tau^2_\phi, \Sigma) p(\alpha_\phi) \\
 \propto & p(\tilde{\phi} | \mu_\phi, \tau^2_\phi, \Sigma) p(\alpha_\phi)
 \end{align*}
 
-\textcolor{red}{(I'm not sure my steps are correct there, notation-wise...)} but essentially the GPD component is independent of $\alpha_\phi$ once the other parameters are known, and so can be absorbed into the constant of proportionality. I'm not sure of the correct step to bring in the $p(\tilde{\phi} | \dots )$ piece. What we're left with is the $MVN$ piece (since $\alpha_\phi$ features in the calculation of $\mu_\phi$) and the prior on $\alpha_\phi$. \\
+Essentially the GPD component is independent of $\alpha_\phi$ once the other parameters are known, and so can be absorbed into the constant of proportionality. What we're left with is the $MVN$ piece (since $\alpha_\phi$ features in the calculation of $\mu_\phi$) and the prior on $\alpha_\phi$. \\
 
 Then we have:
 
 \begin{align*}
 \pi(\alpha_\phi | \dots ) \propto & p(\tilde{\phi} | \mu_\phi, \tau^2_\phi, \Sigma) p(\alpha_\phi) \\
 \propto & \frac{1}{\sqrt{\det(2 \pi (\Sigma + \tau^2_\phi I_m))}} e^{-\frac{1}{2} (\tilde{\phi} - \mu_\phi)' (\Sigma + \tau^2_\phi I_m)^{-1} (\tilde{\phi} - \mu_\phi) } \times \\
-& \frac{1}{\sqrt{\det(2 \pi \Lambda_\phi)}} e^{-\frac{1}{2} (\alpha_\phi - \lambda_\alpha)' \Lambda_\phi^{-1} (\alpha_\phi - \lambda_\alpha) }
+& \frac{1}{\sqrt{\det(2 \pi H_\phi)}} e^{-\frac{1}{2} (\alpha_\phi - \eta_\phi)' H_\phi^{-1} (\alpha_\phi - \eta_\phi) }
 \end{align*}
 
-where $\Lambda_\phi$ is the covariance matrix for the prior distribution of $\alpha_\phi$ and $\lambda_\phi$ is the prior mean.
+where $H_\phi$ is the covariance matrix for the prior distribution of $\alpha_\phi$ and $\eta_\phi$ is the prior mean.
 
 Similarly:
 
 \begin{align*}
 \pi(\alpha_\xi | \dots ) \propto & p(\tilde{\xi} | \mu_\xi, \tau^2_\xi, \Psi) p(\alpha_\xi) \\
 \propto & \frac{1}{\sqrt{\det(2 \pi (\Psi + \tau^2_\xi I_m))}} e^{-\frac{1}{2} (\tilde{\xi} - \mu_\xi)' (\Psi + \tau^2_\xi I_m)^{-1} (\tilde{\xi} - \mu_\xi) } \times \\
-& \frac{1}{\sqrt{\det(2 \pi \Lambda_\xi)}} e^{-\frac{1}{2} (\alpha_\xi - \omega_\alpha)' \Lambda_\xi^{-1} (\alpha_\xi - \omega_\alpha) }
+& \frac{1}{\sqrt{\det(2 \pi H_\xi)}} e^{-\frac{1}{2} (\alpha_\xi - \eta_\xi)' H_\xi^{-1} (\alpha_\xi - \eta_\xi) }
 \end{align*}
 
-where $\Lambda_\xi$ is the covariance matrix for the prior distribution of $\alpha_\xi$ and $\omega_\alpha$ is the prior mean. \\
+where $H_\xi$ is the covariance matrix for the prior distribution of $\alpha_\xi$ and $\eta_\xi$ is the prior mean. \\
 
 As before, updates are suggested for alpha element-wise: $\alpha_{\phi,k} \to \alpha'_{\phi,k}$. The ratio $\rho(\alpha_{\phi,k}, \alpha'_{\phi,k})$ is then calculated. Similar manipulations to those used in the previous section lead to the following calculation needed to update $\alpha_\phi$:
 
 \begin{align}
 \exp \Big[ - \frac{1}{2} & \log(\det(2 \pi (\Sigma + \tau^2_\phi I_m))) -\frac{1}{2} (\tilde{\phi} - \mu_\phi)' (\Sigma + \tau^2_\phi I_m)^{-1} (\tilde{\phi} - \mu_\phi) \nonumber \\
-& - \frac{1}{2} \log(\det(2 \pi \Lambda_\phi)) -\frac{1}{2} (\alpha'_\phi - \lambda_\alpha)' \Lambda_\phi^{-1} (\alpha'_\phi - \lambda_\alpha) ) \nonumber \\
+& - \frac{1}{2} \log(\det(2 \pi H_\phi)) -\frac{1}{2} (\alpha'_\phi - \eta_\phi)' H_\phi^{-1} (\alpha'_\phi - \eta_\phi) ) \nonumber \\
 & + \frac{1}{2} \log(\det(2 \pi (\Sigma + \tau^2_\phi I_m))) + \frac{1}{2} (\tilde{\phi} - \mu_\phi)' (\Sigma + \tau^2_\phi I_m)^{-1} (\tilde{\phi} - \mu_\phi) \nonumber \\
-& + \frac{1}{2} \log(\det(2 \pi \Lambda_\phi)) + \frac{1}{2} (\alpha_\phi - \lambda_\alpha)' \Lambda_\phi^{-1} (\alpha_\phi - \lambda_\alpha) )
+& + \frac{1}{2} \log(\det(2 \pi H_\phi)) + \frac{1}{2} (\alpha_\phi - \eta_\phi)' H_\phi^{-1} (\alpha_\phi - \eta_\phi) )
 \Big] = \nonumber \\
-\exp \Big[ -\frac{1}{2} & (\tilde{\phi} - \mu_\phi)' (\Sigma + \tau^2_\phi I_m)^{-1} (\tilde{\phi} - \mu_\phi) -\frac{1}{2} (\alpha'_\phi - \lambda_\alpha)' \Lambda_\xi^{-1} (\alpha'_\phi - \lambda_\alpha) ) \nonumber \\
-& + \frac{1}{2} (\tilde{\phi} - \mu_\phi)' (\Sigma + \tau^2_\phi I_m)^{-1} (\tilde{\phi} - \mu_\phi) + \frac{1}{2} (\alpha_\phi - \lambda_\alpha)' \Lambda_\phi^{-1} (\alpha_\phi - \lambda_\alpha) )
+\exp \Big[ -\frac{1}{2} & (\tilde{\phi} - \mu_\phi)' (\Sigma + \tau^2_\phi I_m)^{-1} (\tilde{\phi} - \mu_\phi) -\frac{1}{2} (\alpha'_\phi - \eta_\phi)' H_\xi^{-1} (\alpha'_\phi - \eta_\phi) ) \nonumber \\
+& + \frac{1}{2} (\tilde{\phi} - \mu_\phi)' (\Sigma + \tau^2_\phi I_m)^{-1} (\tilde{\phi} - \mu_\phi) + \frac{1}{2} (\alpha_\phi - \eta_\phi)' H_\phi^{-1} (\alpha_\phi - \eta_\phi) )
 \Big] \label{eq:2a1}
 \end{align}
 
 And for $\alpha_\xi$:
 
 \begin{align}
-\exp \Big[ -\frac{1}{2} & (\tilde{\xi} - \mu_\xi)' (\Psi + \tau^2_\xi I_m)^{-1} (\tilde{\xi} - \mu_\xi) -\frac{1}{2} (\alpha'_\xi - \omega_\alpha)' \Lambda_\xi^{-1} (\alpha'_\xi - \omega_\alpha) ) \nonumber \\
-& + \frac{1}{2} (\tilde{\xi} - \mu_\xi)' (\Psi + \tau^2_\xi I_m)^{-1} (\tilde{\xi} - \mu_\xi) + \frac{1}{2} (\alpha_\xi - \omega_\alpha)' \Lambda_\xi^{-1} (\alpha_\xi - \omega_\alpha) )
+\exp \Big[ -\frac{1}{2} & (\tilde{\xi} - \mu_\xi)' (\Psi + \tau^2_\xi I_m)^{-1} (\tilde{\xi} - \mu_\xi) -\frac{1}{2} (\alpha'_\xi - \eta_\xi)' H_\xi^{-1} (\alpha'_\xi - \eta_\xi) ) \nonumber \\
+& + \frac{1}{2} (\tilde{\xi} - \mu_\xi)' (\Psi + \tau^2_\xi I_m)^{-1} (\tilde{\xi} - \mu_\xi) + \frac{1}{2} (\alpha_\xi - \eta_\xi)' H_\xi^{-1} (\alpha_\xi - \eta_\xi) )
 \Big] \label{eq:2a2}
 \end{align}
 
-Updates for the other hyper-parameters are very similar - though a little bit shorter as none feature the $MVN$ prior that $\alpha_\phi$ and $\alpha_\xi$ do. The remaining hyper-parameters either have a discrete update (in which case the prior probability will be $\sfrac{1}{\#discrete.values}$ and will cancel above and below the line, or have a univariate Normal prior on them (or their log). \\
+Updates for the other hyper-parameters are very similar - though none feature the $MVN$ prior that $\alpha_\phi$ and $\alpha_\xi$ do, the part involving the log determinant can't be dropped from the $m$-dim $MVN$, since the matrix changes with any change in $\beta, \nu, \varsigma^2$ or $\tau^2$. The remaining hyper-parameters either have a discrete update (in which case the prior probability will be $\sfrac{1}{\#discrete.values}$ and will cancel above and below the line, or have a univariate Normal prior on them (or their log). \\
 
 \subsection{$\beta$}
 
@@ -461,10 +380,11 @@ For $\beta_\phi$ we have:
 \pi(\beta_\phi | \dots ) \propto & p(\tilde{\phi} | \mu_\phi, \tau^2_\phi, \Sigma) p(\beta_\phi)
 \end{align*}
 
-Since $\beta_\phi$ has a discrete prior, to update $\beta_\phi$ we simply need to evaluate:
+Since $\beta_\phi$ has a discrete prior, to update $\beta_\phi$ we need to evaluate:
 
 \begin{align}
-\exp \Big[ -\frac{1}{2} & (\tilde{\phi} - \mu_\phi)' (\Sigma' + \tau^2_\phi I_m)^{-1} (\tilde{\phi} - \mu_\phi) + \frac{1}{2} (\tilde{\phi} - \mu_\phi)' (\Sigma + \tau^2_\phi I_m)^{-1} (\tilde{\phi} - \mu_\phi) \Big] \label{eq:2b1}
+\exp \Big[ & - \frac{1}{2}  \log(\det(2 \pi (\Sigma' + \tau^2_\phi I_m))) -\frac{1}{2} (\tilde{\phi} - \mu_\phi)' (\Sigma' + \tau^2_\phi I_m)^{-1} (\tilde{\phi} - \mu_\phi) \nonumber \\
+& + \frac{1}{2} \log(\det(2 \pi (\Sigma + \tau^2_\phi I_m))) + \frac{1}{2} (\tilde{\phi} - \mu_\phi)' (\Sigma + \tau^2_\phi I_m)^{-1} (\tilde{\phi} - \mu_\phi) \Big] \label{eq:2b1}
 \end{align}
 
 where $\Sigma'$ has been formed using $\beta'_\phi$, the new proposal value. \\
@@ -478,7 +398,8 @@ Then for $\beta_\xi$ we have:
 To update $\beta_\xi$ we need to evaluate:
 
 \begin{align}
-\exp \Big[ -\frac{1}{2} & (\tilde{\xi} - \mu_\xi)' (\Psi' + \tau^2_\xi I_m)^{-1} (\tilde{\xi} - \mu_\xi) + \frac{1}{2} (\tilde{\xi} - \mu_\xi)' (\Psi + \tau^2_\xi I_m)^{-1} (\tilde{\xi} - \mu_\xi) \Big] \label{eq:2b2}
+\exp \Big[ & -\frac{1}{2} \log(\det(2 \pi (\Psi' + \tau^2_\xi I_m))) -\frac{1}{2} (\tilde{\xi} - \mu_\xi)' (\Psi' + \tau^2_\xi I_m)^{-1} (\tilde{\xi} - \mu_\xi) \nonumber \\
+& + \frac{1}{2} \log(\det(2 \pi (\Psi + \tau^2_\xi I_m)))+ \frac{1}{2} (\tilde{\xi} - \mu_\xi)' (\Psi + \tau^2_\xi I_m)^{-1} (\tilde{\xi} - \mu_\xi) \Big] \label{eq:2b2}
 \end{align}
 
 where $\Psi'$ has been formed using $\beta'_\xi$, the new proposal value. \\
@@ -494,7 +415,8 @@ $\nu_\phi$ also has a discrete update and so will look identical to the update f
 We need to evaluate:
 
 \begin{align}
-\exp \Big[ -\frac{1}{2} & (\tilde{\phi} - \mu_\phi)' (\Sigma' + \tau^2_\phi I_m)^{-1} (\tilde{\phi} - \mu_\phi) + \frac{1}{2} (\tilde{\phi} - \mu_\phi)' (\Sigma + \tau^2_\phi I_m)^{-1} (\tilde{\phi} - \mu_\phi) \Big] \label{eq:2n1}
+\exp \Big[ & - \frac{1}{2}  \log(\det(2 \pi (\Sigma' + \tau^2_\phi I_m))) -\frac{1}{2} (\tilde{\phi} - \mu_\phi)' (\Sigma' + \tau^2_\phi I_m)^{-1} (\tilde{\phi} - \mu_\phi) \nonumber \\
+& + \frac{1}{2} \log(\det(2 \pi (\Sigma + \tau^2_\phi I_m))) + \frac{1}{2} (\tilde{\phi} - \mu_\phi)' (\Sigma + \tau^2_\phi I_m)^{-1} (\tilde{\phi} - \mu_\phi) \Big] \label{eq:2n1}
 \end{align}
 
 where $\Sigma'$ has been formed using $\nu'_\phi$, the new proposal value. \\
@@ -508,7 +430,8 @@ In order to update $\nu_\xi$ we have:
 We therefore need to evaluate:
 
 \begin{align}
-\exp \Big[ -\frac{1}{2} & (\tilde{\xi} - \mu_\xi)' (\Psi' + \tau^2_\xi I_m)^{-1} (\tilde{\xi} - \mu_\xi) + \frac{1}{2} (\tilde{\xi} - \mu_\xi)' (\Psi + \tau^2_\xi I_m)^{-1} (\tilde{\xi} - \mu_\xi) \Big] \label{eq:2n2}
+\exp \Big[ & -\frac{1}{2} \log(\det(2 \pi (\Psi' + \tau^2_\xi I_m))) -\frac{1}{2} (\tilde{\xi} - \mu_\xi)' (\Psi' + \tau^2_\xi I_m)^{-1} (\tilde{\xi} - \mu_\xi) \nonumber \\
+& + \frac{1}{2} \log(\det(2 \pi (\Psi + \tau^2_\xi I_m)))+ \frac{1}{2} (\tilde{\xi} - \mu_\xi)' (\Psi + \tau^2_\xi I_m)^{-1} (\tilde{\xi} - \mu_\xi) \Big] \label{eq:2n2}
 \end{align}
 
 where $\Psi'$ has been formed using $\nu'_\xi$, the new proposal value. \\
@@ -524,8 +447,8 @@ $\varsigma^2_\phi$ has a conditional posterior distribution of:
 The prior distribution of the log of $\varsigma^2_\phi$ is a univariate Normal. So to update $\varsigma^2_\phi$ we need to evaluate:
 
 \begin{align}
-\exp \Bigg[ -\frac{1}{2} & (\tilde{\phi} - \mu_\phi)' (\Sigma' + \tau^2_\phi I_m)^{-1} (\tilde{\phi} - \mu_\phi) - \frac{(\log(\varsigma^{2'}_\phi) - m)^2}{2 s^2} \nonumber \\
-+ & \frac{1}{2} (\tilde{\phi} - \mu_\phi)' (\Sigma + \tau^2_\phi I_m)^{-1} (\tilde{\phi} - \mu_\phi) + \frac{(\log(\varsigma^2_\phi) - m)^2}{2 s^2} \Bigg] \label{eq:2vs1}
+\exp \Bigg[ & - \frac{1}{2}  \log(\det(2 \pi (\Sigma' + \tau^2_\phi I_m))) -\frac{1}{2}  (\tilde{\phi} - \mu_\phi)' (\Sigma' + \tau^2_\phi I_m)^{-1} (\tilde{\phi} - \mu_\phi) - \frac{(\log(\varsigma^{2'}_\phi) - m)^2}{2 s^2} \nonumber \\
+& + \frac{1}{2}  \log(\det(2 \pi (\Sigma + \tau^2_\phi I_m))) + \frac{1}{2} (\tilde{\phi} - \mu_\phi)' (\Sigma + \tau^2_\phi I_m)^{-1} (\tilde{\phi} - \mu_\phi) + \frac{(\log(\varsigma^2_\phi) - m)^2}{2 s^2} \Bigg] \label{eq:2vs1}
 \end{align}
 
 where $\Sigma'$ has been formed using $\varsigma^{2'}_\phi$, the new proposal value, and $m$ and $s$ are the prior mean and standard deviation repectively. \\
@@ -539,8 +462,8 @@ $\varsigma^2_\xi$ has a conditional posterior distribution of:
 To update $\varsigma^2_\xi$ we need to evaluate:
 
 \begin{align}
-\exp \Bigg[ -\frac{1}{2} & (\tilde{\xi} - \mu_\xi)' (\Psi' + \tau^2_\xi I_m)^{-1} (\tilde{\xi} - \mu_\xi) - \frac{(\log(\varsigma^{2'}_\xi) - m)^2}{2 s^2} \nonumber \\
-+ & \frac{1}{2} (\tilde{\xi} - \mu_\xi)' (\Psi + \tau^2_\xi I_m)^{-1} (\tilde{\xi} - \mu_\xi) + \frac{(\log(\varsigma^2_\xi) - m)^2}{2 s^2} \Bigg] \label{eq:2vs2}
+\exp \Bigg[ & -\frac{1}{2} \log(\det(2 \pi (\Psi' + \tau^2_\xi I_m))) -\frac{1}{2}  (\tilde{\xi} - \mu_\xi)' (\Psi' + \tau^2_\xi I_m)^{-1} (\tilde{\xi} - \mu_\xi) - \frac{(\log(\varsigma^{2'}_\xi) - m)^2}{2 s^2} \nonumber \\
+& +  \frac{1}{2} \log(\det(2 \pi (\Psi + \tau^2_\xi I_m))) + \frac{1}{2} (\tilde{\xi} - \mu_\xi)' (\Psi + \tau^2_\xi I_m)^{-1} (\tilde{\xi} - \mu_\xi) + \frac{(\log(\varsigma^2_\xi) - m)^2}{2 s^2} \Bigg] \label{eq:2vs2}
 \end{align}
 
 where $\Psi'$ has been formed using $\varsigma^{2'}_\xi$, the new proposal value, and $m$ and $s$ are the prior mean and standard deviation repectively. \\
@@ -556,11 +479,11 @@ $\tau^2_\phi$ has a conditional posterior distribution of:
 The prior distribution of the log of $\tau^2_\phi$ is a univariate Normal. So to update $\tau^2_\phi$ we need to evaluate:
 
 \begin{align}
-\exp \Bigg[ -\frac{1}{2} & (\tilde{\phi} - \mu_\phi)' (\Sigma' + \tau^2_\phi I_m)^{-1} (\tilde{\phi} - \mu_\phi) - \frac{(\log(\tau^{2'}_\phi) - m)^2}{2 s^2} \nonumber \\
-+ & \frac{1}{2} (\tilde{\phi} - \mu_\phi)' (\Sigma + \tau^2_\phi I_m)^{-1} (\tilde{\phi} - \mu_\phi) + \frac{(\log(\tau^2_\phi) - m)^2}{2 s^2} \Bigg] \label{eq:2t1}
+\exp \Bigg[ & - \frac{1}{2}  \log(\det(2 \pi (\Sigma + \tau^{2'}_\phi I_m))) -\frac{1}{2}  (\tilde{\phi} - \mu_\phi)' (\Sigma + \tau^{2'}_\phi I_m)^{-1} (\tilde{\phi} - \mu_\phi) - \frac{(\log(\tau^{2'}_\phi) - m)^2}{2 s^2} \nonumber \\
+& +  \frac{1}{2}  \log(\det(2 \pi (\Sigma + \tau^2_\phi I_m))) +  \frac{1}{2} (\tilde{\phi} - \mu_\phi)' (\Sigma + \tau^2_\phi I_m)^{-1} (\tilde{\phi} - \mu_\phi) + \frac{(\log(\tau^2_\phi) - m)^2}{2 s^2} \Bigg] \label{eq:2t1}
 \end{align}
 
-where $\Sigma'$ has been formed using $\tau^{2'}_\phi$, the new proposal value, and $m$ and $s$ are the prior mean and standard deviation repectively. \\
+where $m$ and $s$ are the prior mean and standard deviation repectively. \\
 
 $\tau^2_\xi$ has a conditional posterior distribution of:
 
@@ -571,11 +494,11 @@ $\tau^2_\xi$ has a conditional posterior distribution of:
 To update $\tau^2_\xi$ we need to evaluate:
 
 \begin{align}
-\exp \Bigg[ -\frac{1}{2} & (\tilde{\xi} - \mu_\xi)' (\Psi' + \tau^2_\xi I_m)^{-1} (\tilde{\xi} - \mu_\xi) - \frac{(\log(\tau^{2'}_\xi) - m)^2}{2 s^2} \nonumber \\
-+ & \frac{1}{2} (\tilde{\xi} - \mu_\xi)' (\Psi + \tau^2_\xi I_m)^{-1} (\tilde{\xi} - \mu_\xi) + \frac{(\log(\tau^2_\xi) - m)^2}{2 s^2} \Bigg] \label{eq:2t2}
+\exp \Bigg[ & -\frac{1}{2} \log(\det(2 \pi (\Psi + \tau^{2'}_\xi I_m))) -\frac{1}{2}  (\tilde{\xi} - \mu_\xi)' (\Psi + \tau^{2'}_\xi I_m)^{-1} (\tilde{\xi} - \mu_\xi) - \frac{(\log(\tau^{2'}_\xi) - m)^2}{2 s^2} \nonumber \\
+& + \frac{1}{2} \log(\det(2 \pi (\Psi + \tau^{2}_\xi I_m))) +  \frac{1}{2} (\tilde{\xi} - \mu_\xi)' (\Psi + \tau^2_\xi I_m)^{-1} (\tilde{\xi} - \mu_\xi) + \frac{(\log(\tau^2_\xi) - m)^2}{2 s^2} \Bigg] \label{eq:2t2}
 \end{align}
 
-where $\Psi'$ has been formed using $\tau^{2'}_\xi$, the new proposal value, and $m$ and $s$ are the prior mean and standard deviation repectively. \\
+where $m$ and $s$ are the prior mean and standard deviation repectively. \\
 
 
 \end{document}
