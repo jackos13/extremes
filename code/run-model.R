@@ -2,21 +2,30 @@
 ################################# Run Model ################################################
 ############################################################################################
 
+# Clear workspace
+rm(list = ls())
+
 # Required packages:
 if (!require("rpgm")) install.packages("rpgm")
 library(rpgm)
+library(mgcv)
+library(tidyverse)
+
+# Set the seed so we get the same data set every time
+set.seed(123)
 
 # Get the address:
 address <- getwd()
 
 # Source the Rcpp code:
-Rcpp::sourceCpp('pp-script.cpp')
+Rcpp::sourceCpp(paste0(address,'/code/pp-script.cpp'))
 
 # Source the R script:
-source('prepare-data.R')
+source(paste0(address,'/code/prepare-data.R'))
 
 # Set grid:
-x1 <- seq(-1, 1, length.out = 6)
+grid_len = 12
+x1 <- seq(-1, 1, length.out = grid_len)
 x <- as.matrix(expand.grid(x1, x1))
 
 # Spatial dimension:
@@ -79,6 +88,23 @@ n2 <- 100
 for(i in 1:length(data)) {
   data[[i]] <- rgpd(sample(seq(n1, n2)), xi[i], 0, exp(phi[i]))
 }
+
+# Save the data set at this point so that we have everything to hand
+# The list of exceedances as a data frame with location
+# The locations 
+# The sub-locations (optional, part of the modelling choice)
+
+#FIrst convert the data into a proper data frame 
+data2 = unlist(data)
+data_locs = rep(1:nrow(x), 
+                times = unlist(lapply(data, length)))
+data_master = list()
+data_master$exceedance = data.frame(exceedance = data2, 
+                                    location = data_locs)
+data_master$locations = coords.n
+data_master$sublocations = coords.m
+saveRDS(data_master, file = 'data_master.rds')
+stop()
 
 # data is now ready to put into the MCMC function.
 # Now to set everything else up:
@@ -212,9 +238,9 @@ save_cubes(addresses) # save_cubes is in the R code in the prepare-data.R script
 ind_m <- 0:(m-1)
 
 # Setting the number of iterations, the burnin and the n^th value to save
-iterations <- 1e2
-burnin <- 1e1
-nth <- 1e1
+iterations <- 1e4
+burnin <- 1e2
+nth <- 1e2
 
 ###############################################################
 # Run the code:
@@ -285,7 +311,7 @@ for(i in 1:ncol(alpha_shape)) {
 # Printing the table and actual beta_scale values from the matrix:
 for(i in 1:ncol(beta_scale)) {
   print(table(beta_scale[,i]))
-  print(paste0('True value = ', beta.phi[i]))
+  print(paste0('True value of beta.phi = ', beta.phi[i]))
 }
 
 # Printing the table and actual beta_shape values from the matrix:
