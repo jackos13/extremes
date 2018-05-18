@@ -910,6 +910,7 @@ List mcmcC(List data,
   ////////////////////////////////////////////////////////////////////////////////////////
   // Now for the MCMC step, now that everything has been set up:
   for(int i = 0; i < iterations; ++i) {
+    Rprintf("%d \n", i);
     
     // At the i^th step, all will be accepted or rejected with this probability:
     rnd = runif(1, 0, 1);

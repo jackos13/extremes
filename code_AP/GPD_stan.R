@@ -28,6 +28,10 @@ N = length(y)
 fit1 = sampling(gpd1_run,
                 data = list(y = y,
                             N = N))
+fit1 = optimizing(gpd1_run,
+                  data = list(y = y,
+                              N = N))
+
 
 # Plot it
 plot(fit1)

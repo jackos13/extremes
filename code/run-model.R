@@ -24,7 +24,7 @@ Rcpp::sourceCpp(paste0(address,'/code/pp-script.cpp'))
 source(paste0(address,'/code/prepare-data.R'))
 
 # Set grid:
-grid_len = 12
+grid_len = 6
 x1 <- seq(-1, 1, length.out = grid_len)
 x <- as.matrix(expand.grid(x1, x1))
 
@@ -104,7 +104,7 @@ data_master$exceedance = data.frame(exceedance = data2,
 data_master$locations = coords.n
 data_master$sublocations = coords.m
 saveRDS(data_master, file = 'data_master.rds')
-stop()
+#stop()
 
 # data is now ready to put into the MCMC function.
 # Now to set everything else up:
@@ -239,8 +239,8 @@ ind_m <- 0:(m-1)
 
 # Setting the number of iterations, the burnin and the n^th value to save
 iterations <- 1e4
-burnin <- 1e2
-nth <- 1e2
+burnin <- 1e3
+nth <- 1e1
 
 ###############################################################
 # Run the code:
@@ -271,6 +271,14 @@ attach(chainC)
 # on the grid, and the posterior values:
 round(apply(scale, 2, mean) - exp(phi), 1)
 round(apply(shape, 2, mean) - xi, 1)
+
+plot(apply(scale, 2, mean),exp(phi))
+abline(a=0, b=1)
+plot(apply(shape, 2, mean),xi)
+abline(a=0, b=1)
+
+truth = list(log_scale = phi, shape = xi)
+saveRDS(truth, file = 'truth_master.rds')
 
 # Some plots below - values of the scale and the shape at 4 random points on the grid:
 # red line - true value

@@ -26,14 +26,12 @@ gpd4_run = stan_model(stanc_ret = gpd4) # Compile Stan code
 # Prep data
 y = exc$exceedance[,1]
 loc = exc$exceedance[,2]
-# x1 = exc$locations[,1]
-# x2 = exc$locations[,2]
 X = exc$locations
 #Z = X[seq(1,nrow(X), by = 2),] # Every other location
 #plot(X); points(Z, pch = 19)
 N = length(y)
 N_loc = nrow(X)
-N_z = 50 # Choose a random 10 rows
+N_z = 10 # Choose a random 10 rows
 Z = X[sample(1:nrow(X), N_z),] 
 
 # Run it
@@ -53,3 +51,12 @@ plot(fit4, pars = c('int_sc', 'rho_sc', 'alpha_sc',
 # Print it
 print(fit4, pars = c('int_sc', 'rho_sc', 'alpha_sc',
                      'int_sh', 'rho_sh', 'alpha_sh'))
+
+# Compare it to truth
+truth = readRDS(file = 'truth_master.rds')
+shape_stan = colMeans(rstan::extract(fit4, pars = 'shape')$shape)
+plot(shape_stan, truth$shape)
+abline(a=0, b = 1)
+scale_stan = colMeans(rstan::extract(fit4, pars = 'scale')$scale)
+plot(scale_stan, exp(truth$log_scale))
+abline(a=0, b = 1)
