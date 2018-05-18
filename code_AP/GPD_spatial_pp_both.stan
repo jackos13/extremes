@@ -23,7 +23,7 @@ parameters {
   real int_sh; // Shape intercept
   real<lower=0> rho_sh; // GP scale for shape
   real<lower=0> alpha_sh; // GP standard deviation for shape
-  vector[N_z] log_shape_m; // log_shape effect
+  vector[N_z] shape_m; // shape effect
 }
 transformed parameters {
   vector[N_loc] log_scale; // log_scale effect
@@ -31,8 +31,7 @@ transformed parameters {
   vector[N_z] mu_sc = rep_vector(int_sc, N_z); // Mean parameter for scale
   matrix[N_z, N_z] Sigma_sc = cov_exp_quad(Z, alpha_sc, rho_sc);
   matrix[N_loc, N_z] Sigma_cross_sc = cov_exp_quad(X, Z, alpha_sc, rho_sc);
-  vector[N_loc] log_shape; // log_scale effect
-  vector[N_loc] shape; // GPD scale parameter for each location
+  vector[N_loc] shape; // Shape effect
   vector[N_z] mu_sh = rep_vector(int_sh, N_z); // Mean parameter for scale
   matrix[N_z, N_z] Sigma_sh = cov_exp_quad(Z, alpha_sh, rho_sh);
   matrix[N_loc, N_z] Sigma_cross_sh = cov_exp_quad(X, Z, alpha_sh, rho_sh);
@@ -44,8 +43,7 @@ transformed parameters {
   
   for (n in 1:N_z) 
     Sigma_sh[n, n] = Sigma_sh[n, n] + 1e-12; // Add in to ensure positive definiteness
-  log_shape = Sigma_cross_sh * inverse(Sigma_sh) * log_shape_m;
-  shape = exp(log_shape);
+  shape = Sigma_cross_sh * inverse(Sigma_sh) * shape_m;
 }
 model {
   // Declare objects only used here
@@ -66,7 +64,7 @@ model {
   
   // Spatial effect
   log_scale_m ~ multi_normal_cholesky(mu_sc, Sigma_chol_sc);
-  log_shape_m ~ multi_normal_cholesky(mu_sh, Sigma_chol_sh);
+  shape_m ~ multi_normal_cholesky(mu_sh, Sigma_chol_sh);
   
   // Likelihood
   for (n in 1:N){
