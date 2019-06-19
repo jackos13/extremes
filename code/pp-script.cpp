@@ -3,7 +3,6 @@
 ////////////////////////////////////////////////////////////////////////////////////
 // This script uses a Matern covariance function
 // and implements the Predictive Processes piece in full
-
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Calculating the distance list:
 // This function takes two matrices and returns a list.
@@ -65,11 +64,10 @@ double matern_cpp(double sigsq, double nu, vec d, mat invbeta, double tausq) {
   
   // Otherwise:
   double con;
-  double dist = pow(as_scalar(d.t()*invbeta*d), 0.5);
+  double dist = pow(as_scalar(d.t() * invbeta * d), 0.5);
   con = pow(2,nu-1) * tgamma(nu);
   con = 1/con;
   return(sigsq * con * pow(dist, nu) * boost::math::cyl_bessel_k(nu, dist));
-  //return(dist);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -146,6 +144,46 @@ int save_big_cube(List dist, List big_beta, vec nu, double sigsq, double tausq, 
   return(0);
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// Code to load the cube into R here:
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// In this function, I simply return the cube to R. It seems a roundabout way,
+// but the easiest way
+// [[Rcpp::depends(BH)]]
+#include <boost/math/special_functions/bessel.hpp>
+#include <RcppArmadillo.h>
+
+// [[Rcpp::depends(RcppArmadillo)]]
+using namespace arma;
+using namespace Rcpp;
+using boost::math::cyl_bessel_k;
+
+// [[Rcpp::export]]
+List retrieve_cube(StringVector address1) {
+  
+  // The List to return:
+  List out(4);
+  
+  // Creating the 4 variables:
+  cube cube_covar_scale; cube cube_covar_shape; cube cube_nxm_scale; cube cube_nxm_shape;
+  
+  // Loading the four with the given names:
+  string str1; string str2; string str3; string str4;
+  str1 = address1[0]; str2 = address1[1]; str3 = address1[2]; str4 = address1[3];
+  cube_covar_scale.load(str1);
+  cube_covar_shape.load(str2);
+  cube_nxm_scale.load(str3);
+  cube_nxm_shape.load(str4);
+  
+  // Writing them to the list:
+  out[0] = cube_covar_scale;
+  out[1] = cube_covar_shape;
+  out[2] = cube_nxm_scale;
+  out[3] = cube_nxm_shape;
+  
+  return(out);
+}
+
 // ################################################################################
 // ############################# Data layer #######################################
 // ################################################################################
@@ -174,7 +212,6 @@ double dgpdC(List exc, vec lscale, vec shape, int n) {
   
   for(int i = 0; i < n; i++) {
     out[i] = sum(- log(scale[i]) + (-1/shape[i] - 1) * log(1 + shape[i] * (as<vec>(exc[i])/scale[i] )));
-    //  out[i] = - log (scale[i]) - (as<vec>(exc[i]) - mu[i])/scale[i];
   }
   
   return sum(out);
@@ -237,7 +274,6 @@ double mvnC(vec x, vec mu, mat sigma) {
 // Evaluating the normal density for scalars:
 // This straightforward function evaluates the normal density for a single scalar, given a mean
 // and an sd. It then takes the log of this, and returns the value.
-// (Why did I include the 2*pi? Come back to this. I assume it's not needed.)
 #include <math.h>
 #include <RcppArmadillo.h>
 // [[Rcpp::depends(RcppArmadillo)]]
@@ -280,7 +316,7 @@ bool pos_def_testC(mat m) {
   vec v(n);
   
   for (int j=0; j<n; ++j) {
-    v(j) = det(m); //round(det(m)); This was causing trouble at some point....
+    v(j) = det(m);
     m.shed_row(n-j-1);
     m.shed_col(n-j-1);
   }
@@ -288,7 +324,6 @@ bool pos_def_testC(mat m) {
   bool test = all(v>0);  
   return test;
 }
-
 
 // ###############################################################################################
 // ############################################ Posteriors #######################################
@@ -816,10 +851,10 @@ List mcmcC(List data,
   // based on the current proposed values of the vector
   cube cube_covar_scale; cube cube_covar_shape; cube cube_nxm_scale; cube cube_nxm_shape;
   
-  cube_covar_scale.load("cube1.cube");
-  cube_covar_shape.load("cube2.cube");
-  cube_nxm_scale.load("big_cube1.cube");
-  cube_nxm_shape.load("big_cube2.cube");
+  cube_covar_scale.load("cubes/cube1.cube");
+  cube_covar_shape.load("cubes/cube2.cube");
+  cube_nxm_scale.load("cubes/big_cube1.cube");
+  cube_nxm_shape.load("cubes/big_cube2.cube");
   
   // Selecting the first of these to input into the MCMC process
   // This means beta and nu should have their starting value as the first one
@@ -837,8 +872,8 @@ List mcmcC(List data,
   
   ////////////////////////////////////////////////////////////////////////////////////////
   // doubles needed for the log det. step, all of which are calculated in vectors below:
-  double dett_scale; double sign = 1;
-  double dett_shape;
+  double dett_scale = 0; double sign = 1;
+  double dett_shape = 0;
   double dettnew_scale = dett_scale;
   double dettnew_shape = dett_shape;
   
@@ -894,12 +929,7 @@ List mcmcC(List data,
   
   NumericVector cube_shape_counter;
   cube_shape_counter.push_back(ind2);
-  
-  // A quick fix (it's not a big deal)
-  prop_tausq_scale = 0.01; prop_tausq_shape = 0.01;
-  // It's because to make the cube work, I neeed to set tausq to be 0 initially -
-  // but once selected, I want the first one to be invertible, so it's better to add a small tausq
-  
+
   // Creating the vector for random indices:
   vec rand_ind; vec prob1;
   rand_ind.set_size(m_dim);
@@ -910,60 +940,59 @@ List mcmcC(List data,
   ////////////////////////////////////////////////////////////////////////////////////////
   // Now for the MCMC step, now that everything has been set up:
   for(int i = 0; i < iterations; ++i) {
-    Rprintf("%d \n", i);
-    
+
     // At the i^th step, all will be accepted or rejected with this probability:
     rnd = runif(1, 0, 1);
     rndm = as_scalar(rnd);
-    
+
     // Now to update the values of nlscale and nshape depending on the current value
     // of mlscale and mshape, and the matrices etc.:
-    
-    // ///////////////////////////////////////////////////////////////////////////////////
-    // ///////////////////////// Scale updates now: //////////////////////////////////////
-    // //////////////////////////////////////////////////////////////////////////////////
-    // // Updating the lscale values:
-    // ////////////////////////////////////////////////////////////////////////////////////
-    // // Setting things up:
-    // ///////////////////////////////////////////////////////////////////////////////////
+
+    ///////////////////////////////////////////////////////////////////////////////////
+    ///////////////////////// Scale updates now: //////////////////////////////////////
+    //////////////////////////////////////////////////////////////////////////////////
+    // Updating the lscale values:
+    ////////////////////////////////////////////////////////////////////////////////////
+    // Setting things up:
+    ///////////////////////////////////////////////////////////////////////////////////
     newprop_mlscale = prop_mlscale;
-    
+
     // Getting the correct Sigma_scale for the scale update:
     Sigma_scale = prop_sigsq_scale * cube_covar_scale.slice(ind1);
     Sigma_scale.replace(prop_sigsq_scale, prop_sigsq_scale + prop_tausq_scale);
-    
+
     // Getting the correct n x m matrix once for the scale update:
     n_x_m_scale = prop_sigsq_scale * cube_nxm_scale.slice(ind1);
     n_x_m_scale.replace(prop_sigsq_scale, prop_sigsq_scale + prop_tausq_scale);
-    
+
     // Getting the relevant determinant:
     log_det(dett_scale, sign, Sigma_scale);
     ///////////////////////////////////////////////////////////////////////////////////
     // Now getting the value on the larger grid using the kriging equations:
     prop_nlscale = bigcovar1 * prop_alpha_scale +
       n_x_m_scale * solve(Sigma_scale, prop_mlscale - covar1 * prop_alpha_scale);
-    
+
     newprop_nlscale = prop_nlscale;
-    
+
     // Getting the necessary indices (updating in a random order across the grid):
     rand_ind = Rcpp::RcppArmadillo::sample(ind_m, m_dim, 0, prob1);
-    
+
     for (unsigned int l = 0; l < prop_mlscale.size(); ++l) {
-      
+
       // Updating each of the m entries one by one:
       newprop_mlscale[rand_ind[l]] = rnormscalarC(prop_mlscale[rand_ind[l]], step_scale(0));
-      
+
       // Now to update the values of nlscale depending on the current value
       // of newprop_mlscale, and the matrices etc. (the PP part):
       newprop_nlscale = bigcovar1 * prop_alpha_scale +
         n_x_m_scale * solve(Sigma_scale, newprop_mlscale - covar1 * prop_alpha_scale);
-      
+
       // Calculating the MCMC fraction:
       probab = exp( post_scaleC(data, newprop_nlscale, prop_nshape, prop_alpha_scale,
                                 covar1, newprop_mlscale, Sigma_scale, dett_scale, n_dim) -
                                   post_scaleC(data, prop_nlscale, prop_nshape, prop_alpha_scale,
                                               covar1, prop_mlscale, Sigma_scale, dett_scale, n_dim) );
-      
+
       if (rndm < probab) {
         prop_nlscale = newprop_nlscale;
         prop_mlscale = newprop_mlscale;
@@ -974,28 +1003,28 @@ List mcmcC(List data,
         tempr[rand_ind[l]] = 0;
       }
     }
-    
+
     ////////////////////////////////////////////////////////////////////////////////////
     // Updating the alpha_scale parameter:
     ////////////////////////////////////////////////////////////////////////////////////
     newprop_alpha_scale = prop_alpha_scale;
     for (unsigned int l = 0; l < prop_alpha_scale.size(); ++l) {
-      
+
       newprop_alpha_scale[l] = rnormscalarC(prop_alpha_scale[l], step_alpha_scale[l]);
-      
+
       // Now to update the values of nlscale depending on the current value
       // of newprop_mlscale, and the new alpha hyper-parameters and the matrices etc. (the PP part):
       newprop_nlscale = bigcovar1 * newprop_alpha_scale + n_x_m_scale *
         solve(Sigma_scale, prop_mlscale - covar1 * newprop_alpha_scale);
-      
+
       probab = exp (post_alpha_scaleC(data, newprop_nlscale, prop_nshape,
                                       newprop_alpha_scale, prop_mlscale, covar1, Sigma_scale,
                                       alpha_scale_hyper_mean, alpha_scale_hyper_sd, dett_scale) -
                                         post_alpha_scaleC(data, prop_nlscale, prop_nshape,
                                                           prop_alpha_scale, prop_mlscale, covar1, Sigma_scale,
                                                           alpha_scale_hyper_mean, alpha_scale_hyper_sd, dett_scale) ) ;
-      
-      //  Come back to this:
+
+      //  Accept or reject step:
       if (rndm < probab) {
         prop_alpha_scale = newprop_alpha_scale;
         prop_nlscale = newprop_nlscale;
@@ -1006,32 +1035,32 @@ List mcmcC(List data,
         temps[l] = 0;
       }
     }
-    
+
     ////////////////////////////////////////////////////////////////////////////////////
     // Updating the beta_scale parameter:
     ////////////////////////////////////////////////////////////////////////////////////
     // A random number between 0 and (number of beta matrices - 1):
     c_beta_scale_new = rand() % numbeta;
-    
+
     // Getting the new index for the cubes, based on this random number:
     ind1 = (numbeta) * c_nu_scale + c_beta_scale_new;
-    
+
     // Selecting the entries of beta:
     // Reshaping the vector into a matrix:
     newprop_beta_scale = reshape(big_beta_mat.row(c_beta_scale_new), dimension, dimension);
-    
+
     // Selecting the relevant covariance matrix:
     Sigma_new_scale = prop_sigsq_scale * cube_covar_scale.slice(ind1);
     Sigma_new_scale.replace(prop_sigsq_scale, prop_sigsq_scale + prop_tausq_scale);
     // Getting the relevant determinant:
     log_det(dettnew_scale, sign, Sigma_new_scale);
-    
+
     // Calculating the ratio with the new Sigma and beta vs. the old ones:
     probab = exp (post_beta_scaleC(Sigma_new_scale, newprop_beta_scale, prop_mlscale,
                                    prop_alpha_scale, covar1, dettnew_scale) -
                                      post_beta_scaleC(Sigma_scale, prop_beta_scale, prop_mlscale,
                                                       prop_alpha_scale, covar1, dett_scale) );
-    
+
     // Accept or reject step:
     if (rndm < probab) {
       prop_beta_scale = newprop_beta_scale;
@@ -1046,22 +1075,22 @@ List mcmcC(List data,
       c_beta_scale_new = c_beta_scale;
       b6 = 0;
     }
-    
+
     // Recalculating the index:
     ind1 = (numbeta) * c_nu_scale + c_beta_scale;
-    
+
     //////////////////////////////////////////////////////////////////////////////////////////
     // Updating the sigsq_scale parameter now:
     ////////////////////////////////////////////////////////////////////////////////////
     temp_sigsq = rnormscalarC(log(prop_sigsq_scale), step_sigsq_scale);
     newprop_sigsq_scale = exp(temp_sigsq);
-    
+
     // Updating Sigma - Selecting the relevant covariance matrix:
     Sigma_new_scale = newprop_sigsq_scale * cube_covar_scale.slice(ind1);
     Sigma_new_scale.replace(newprop_sigsq_scale, newprop_sigsq_scale + prop_tausq_scale);
     // Getting the relevant determinant:
     log_det(dettnew_scale, sign, Sigma_new_scale);
-    
+
     // Calculating probab:
     probab = exp( post_sigsq_scaleC(Sigma_new_scale, prop_mlscale, prop_alpha_scale,
                                     covar1, newprop_sigsq_scale, dettnew_scale,
@@ -1069,7 +1098,7 @@ List mcmcC(List data,
                                       post_sigsq_scaleC(Sigma_scale, prop_mlscale, prop_alpha_scale,
                                                         covar1, prop_sigsq_scale, dett_scale,
                                                         sigsq_scale_mean, sigsq_scale_sd) );
-    
+
     // Accept or reject step:
     if (rndm < probab) {
       prop_sigsq_scale = newprop_sigsq_scale;
@@ -1082,27 +1111,27 @@ List mcmcC(List data,
       dettnew_scale = dett_scale;
       b1 = 0;
     }
-    
+
     ///////////////////////////////////////////////////////////////////////////////////////////
     // Updating the tausq_scale parameter now:
     ////////////////////////////////////////////////////////////////////////////////////
     temp_tausq = rnormscalarC(log(prop_tausq_scale), step_tausq_scale);
     newprop_tausq_scale = exp(temp_tausq);
-    
-    // Updating Sigma - Selecting the relevant covariance matrix (I don't think the first line
-    // is needed here, but will leave it in for now!):
+
+    // Updating Sigma - Selecting the relevant covariance matrix (The first line isn't strictly
+    // needed here, but will leave it in for now):
     Sigma_new_scale = prop_sigsq_scale * cube_covar_scale.slice(ind1);
     Sigma_new_scale.replace(prop_sigsq_scale, prop_sigsq_scale + newprop_tausq_scale);
     // Getting the relevant determinant:
     log_det(dettnew_scale, sign, Sigma_new_scale);
-    
+
     probab = exp( post_tausq_scaleC(Sigma_new_scale, prop_mlscale, prop_alpha_scale,
                                     covar1, newprop_tausq_scale, dettnew_scale,
                                     tausq_scale_mean, tausq_scale_sd) -
                                       post_tausq_scaleC(Sigma_scale, prop_mlscale, prop_alpha_scale,
                                                         covar1, prop_tausq_scale, dett_scale,
                                                         tausq_scale_mean, tausq_scale_sd) );
-    
+
     // Accept or reject step:
     if (rndm < probab) {
       prop_tausq_scale = newprop_tausq_scale;
@@ -1115,23 +1144,23 @@ List mcmcC(List data,
       dettnew_scale = dett_scale;
       b2 = 0;
     }
-    
+
     ///////////////////////////////////////////////////////////////////////////////////////////
     // Updating the nu_scale parameter now:
     ////////////////////////////////////////////////////////////////////////////////////
     // A random number between 0 and the (number of possible nu's - 1):
     c_nu_scale_new = rand() % len_nu_scale;
     newprop_nu_scale = nu_scale_hyper_discrete(c_nu_scale_new);
-    
+
     // Getting the new index for the cubes, based on this random number:
     ind1 = (numbeta) * c_nu_scale_new + c_beta_scale;
-    
+
     // Selecting the relevant covariance matrix:
     Sigma_new_scale = prop_sigsq_scale * cube_covar_scale.slice(ind1);
     Sigma_new_scale.replace(prop_sigsq_scale, prop_sigsq_scale + prop_tausq_scale);
     // Getting the relevant determinant:
     log_det(dettnew_scale, sign, Sigma_new_scale);
-    
+
     // Calculating the ratio with the new Sigma and nu vs. the old ones:
     probab = exp( post_nu_scaleC(Sigma_new_scale, prop_mlscale, prop_alpha_scale,
                                  covar1, newprop_nu_scale, dettnew_scale,
@@ -1139,7 +1168,7 @@ List mcmcC(List data,
                                    post_nu_scaleC(Sigma_scale, prop_mlscale, prop_alpha_scale,
                                                   covar1, prop_nu_scale, dett_scale,
                                                   nu_scale_mean, nu_scale_sd) );
-    
+
     // Accept or reject step:
     if (rndm < probab) {
       prop_nu_scale = newprop_nu_scale;
@@ -1154,56 +1183,56 @@ List mcmcC(List data,
       c_nu_scale_new = c_nu_scale;
       b10 = 0;
     }
-    
+
     // Recalculating the index:
     ind1 = (numbeta) * c_nu_scale + c_beta_scale;
-    
+
     ///////////////////////////////////////////////////////////////////////////////////
     ///////////////////////// Shape updates now: //////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////
     // Updating the shape parameter now:
     ////////////////////////////////////////////////////////////////////////////////////
     newprop_mshape = prop_mshape;
-    
+
     // Getting the correct Sigma_shape for the shape update:
     Sigma_shape = prop_sigsq_shape * cube_covar_shape.slice(ind2);
     Sigma_shape.replace(prop_sigsq_shape, prop_sigsq_shape + prop_tausq_shape);
-    
+
     // Getting the correct n x m matrix once for the shape update:
     n_x_m_shape = prop_sigsq_shape * cube_nxm_shape.slice(ind2);
     n_x_m_shape.replace(prop_sigsq_shape, prop_sigsq_shape + prop_tausq_shape);
-    
+
     // Getting the relevant determinant:
     log_det(dett_shape, sign, Sigma_shape);
-    
+
     ///////////////////////////////////////////////////////////////////////////////////
     // Now getting the value on the larger grid using the kriging equations:
-    
+
     prop_nshape = bigcovar2 * prop_alpha_shape + n_x_m_shape *
       solve(Sigma_shape, prop_mshape - covar2 * prop_alpha_shape);
-    
+
     newprop_nshape = prop_nshape;
-    
+
     // Getting the necessary indices (updating in a random order):
     rand_ind = Rcpp::RcppArmadillo::sample(ind_m, m_dim, 0, prob1);
-    
+
     for (unsigned int l = 0; l < prop_mshape.size(); ++l) {
-      
+
       // Updating each of the m entries one by one:
       newprop_mshape[rand_ind[l]] = rnormscalarC(prop_mshape[rand_ind[l]], step_shape(0));
-      
+
       // Now to update the values of nshape depending on the current value
       // of newprop_mshape, and the matrices etc. (the PP part)
       newprop_nshape = bigcovar2 * prop_alpha_shape + n_x_m_shape *
         solve(Sigma_shape, newprop_mshape - covar2 * prop_alpha_shape);
-      
-      // Calculating the MCMC fraction:
+
+      // // Calculating the MCMC fraction:
       probab = exp( post_shapeC(data, prop_nlscale, newprop_nshape, prop_alpha_shape,
                                 covar2, newprop_mshape, Sigma_shape, dett_shape, n_dim) -
                                   post_shapeC(data, prop_nlscale, prop_nshape, prop_alpha_shape,
                                               covar2, prop_mshape, Sigma_shape, dett_shape, n_dim) );
-      
-      //  Come back to this:
+
+      // Accept or reject step:
       if (rndm < probab) {
         prop_mshape = newprop_mshape;
         prop_nshape = newprop_nshape;
@@ -1214,20 +1243,20 @@ List mcmcC(List data,
         tempu[rand_ind[l]] = 0;
       }
     }
-    
+
     ////////////////////////////////////////////////////////////////////////////////////////////////
     // Updating the alpha_shape parameter:
     ////////////////////////////////////////////////////////////////////////////////////////////////
     newprop_alpha_shape = prop_alpha_shape;
     for (unsigned int l = 0; l < prop_alpha_shape.size(); ++l) {
-      
+
       newprop_alpha_shape[l] = rnormscalarC(prop_alpha_shape[l], step_alpha_shape[l]);
-      
+
       probab = exp (post_alpha_shapeC(newprop_alpha_shape, prop_mshape, covar2, Sigma_shape,
                                       alpha_shape_hyper_mean, alpha_shape_hyper_sd, dett_shape) -
                                         post_alpha_shapeC(prop_alpha_shape, prop_mshape, covar2, Sigma_shape,
                                                           alpha_shape_hyper_mean, alpha_shape_hyper_sd, dett_shape) ) ;
-      
+
       if (rndm < probab) {
         prop_alpha_shape = newprop_alpha_shape;
         tempv[l] = 1;
@@ -1236,32 +1265,32 @@ List mcmcC(List data,
         tempv[l] = 0;
       }
     }
-    
+
     ////////////////////////////////////////////////////////////////////////////////////////////////
     // Updating the beta_shape parameter:
     ////////////////////////////////////////////////////////////////////////////////////////////////
     // A random number between 0 and (number of beta matrices - 1):
     c_beta_shape_new = rand() % numbeta;
-    
+
     // Getting the new index for the cubes, based on this random number:
     ind2 = (numbeta) * c_nu_shape + c_beta_shape_new;
-    
+
     // Selecting the entries of beta:
     // Reshaping the vector into a matrix:
     newprop_beta_shape = reshape(big_beta_mat.row(c_beta_shape_new), dimension, dimension);
-    
+
     // Selecting the relevant covariance matrix:
     Sigma_new_shape = prop_sigsq_shape * cube_covar_shape.slice(ind2);
     Sigma_new_shape.replace(prop_sigsq_shape, prop_sigsq_shape + prop_tausq_shape);
     // Getting the relevant determinant:
     log_det(dettnew_shape, sign, Sigma_new_shape);
-    
+
     // Calculating the ratio with the new Sigma and beta vs. the old ones:
     probab = exp (post_beta_shapeC(Sigma_new_shape, newprop_beta_shape, prop_mshape,
                                    prop_alpha_shape, covar2, dettnew_shape) -
                                      post_beta_shapeC(Sigma_shape, prop_beta_shape, prop_mshape,
                                                       prop_alpha_shape, covar2, dett_shape) );
-    
+
     // Accept or reject step:
     if (rndm < probab) {
       prop_beta_shape = newprop_beta_shape;
@@ -1276,22 +1305,22 @@ List mcmcC(List data,
       c_beta_shape_new = c_beta_shape;
       b7 = 0;
     }
-    
+
     // Recalculating the index:
     ind2 = (numbeta) * c_nu_shape + c_beta_shape;
-    
+
     //////////////////////////////////////////////////////////////////////////////////////////
     // Updating the sigsq_shape parameter now:
     ////////////////////////////////////////////////////////////////////////////////////
     temp_sigsq = rnormscalarC(log(prop_sigsq_shape), step_sigsq_shape);
     newprop_sigsq_shape = exp(temp_sigsq);
-    
+
     // Updating Sigma - Selecting the relevant covariance matrix:
     Sigma_new_shape = newprop_sigsq_shape * cube_covar_shape.slice(ind2);
     Sigma_new_shape.replace(newprop_sigsq_shape, newprop_sigsq_shape + prop_tausq_shape);
     // Getting the relevant determinant:
     log_det(dettnew_shape, sign, Sigma_new_shape);
-    
+
     // Calculating probab:
     probab = exp( post_sigsq_shapeC(Sigma_new_shape, prop_mshape, prop_alpha_shape,
                                     covar1, newprop_sigsq_shape, dettnew_shape,
@@ -1299,7 +1328,7 @@ List mcmcC(List data,
                                       post_sigsq_shapeC(Sigma_shape, prop_mshape, prop_alpha_shape,
                                                         covar1, prop_sigsq_shape, dett_shape,
                                                         sigsq_shape_mean, sigsq_shape_sd) );
-    
+
     // Accept or reject step:
     if (rndm < probab) {
       prop_sigsq_shape = newprop_sigsq_shape;
@@ -1312,27 +1341,27 @@ List mcmcC(List data,
       dettnew_shape = dett_shape;
       b3 = 0;
     }
-    
+
     ///////////////////////////////////////////////////////////////////////////////////////////
     // Updating the tausq_shape parameter now:
     ////////////////////////////////////////////////////////////////////////////////////
     temp_tausq = rnormscalarC(log(prop_tausq_shape), step_tausq_shape);
     newprop_tausq_shape = exp(temp_tausq);
-    
-    // Updating Sigma - Selecting the relevant covariance matrix (I don't think the first line
-    // is needed here, but will leave it in for now!):
+
+    // Updating Sigma - Selecting the relevant covariance matrix (The first line isn't strictly
+    // needed here, but will leave it in for now!):
     Sigma_new_shape = prop_sigsq_shape * cube_covar_shape.slice(ind2);
     Sigma_new_shape.replace(prop_sigsq_shape, prop_sigsq_shape + newprop_tausq_shape);
     // Getting the relevant determinant:
     log_det(dettnew_shape, sign, Sigma_new_shape);
-    
+
     probab = exp( post_tausq_shapeC(Sigma_new_shape, prop_mshape, prop_alpha_shape,
                                     covar1, newprop_tausq_shape, dettnew_shape,
                                     tausq_shape_mean, tausq_shape_sd) -
                                       post_tausq_shapeC(Sigma_shape, prop_mshape, prop_alpha_shape,
                                                         covar1, prop_tausq_shape, dett_shape,
                                                         tausq_shape_mean, tausq_shape_sd) );
-    
+
     // Accept or reject step:
     if (rndm < probab) {
       prop_tausq_shape = newprop_tausq_shape;
@@ -1345,23 +1374,23 @@ List mcmcC(List data,
       dettnew_shape = dett_shape;
       b4 = 0;
     }
-    
+
     ///////////////////////////////////////////////////////////////////////////////////////////
     // Updating the nu_shape parameter now:
     ////////////////////////////////////////////////////////////////////////////////////
     // A random number between 0 and the (number of possible nu's - 1):
     c_nu_shape_new = rand() % len_nu_shape;
     newprop_nu_shape = nu_shape_hyper_discrete(c_nu_shape_new);
-    
+
     // Getting the new index for the cubes, based on this random number:
     ind2 = (numbeta) * c_nu_shape_new + c_beta_shape;
-    
+
     // Selecting the relevant covariance matrix:
     Sigma_new_shape = prop_sigsq_shape * cube_covar_shape.slice(ind2);
     Sigma_new_shape.replace(prop_sigsq_shape, prop_sigsq_shape + prop_tausq_shape);
     // Getting the relevant determinant:
     log_det(dettnew_shape, sign, Sigma_new_shape);
-    
+
     // Calculating the ratio with the new Sigma and nu vs. the old ones:
     probab = exp( post_nu_shapeC(Sigma_new_shape, prop_mshape, prop_alpha_shape,
                                  covar1, newprop_nu_shape, dettnew_shape,
@@ -1369,7 +1398,7 @@ List mcmcC(List data,
                                    post_nu_shapeC(Sigma_shape, prop_mshape, prop_alpha_shape,
                                                   covar1, prop_nu_shape, dett_shape,
                                                   nu_shape_mean, nu_shape_sd) );
-    
+
     // Accept or reject step:
     if (rndm < probab) {
       prop_nu_shape = newprop_nu_shape;
@@ -1384,10 +1413,10 @@ List mcmcC(List data,
       c_nu_shape_new = c_nu_shape;
       b11 = 0;
     }
-    
+
     // Recalculating the index:
     ind2 = (numbeta) * c_nu_shape + c_beta_shape;
-    
+
     ///////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////// Now to calculate the acceptance rates: ///////////////////////
     ///////////////////////////////////////////////////////////////////////////////////////////////
@@ -1397,20 +1426,25 @@ List mcmcC(List data,
     acc_sigsq_scale = acc_sigsq_scale + b1;
     acc_tausq_scale = acc_tausq_scale + b2;
     acc_nu_scale = acc_nu_scale + b10;
-    
+
     acc_shape = acc_shape + tempu;
     acc_alpha_shape = acc_alpha_shape + tempv;
     acc_beta_shape = acc_beta_shape + b7;
     acc_sigsq_shape = acc_sigsq_shape + b3;
     acc_tausq_shape = acc_tausq_shape + b4;
     acc_nu_shape = acc_nu_shape + b11;
-    
+
     /////////////////// Saving these at selected iterations: //////////////////////////////////////
-    
+
     // Save if we're beyond the burn-in period *and* it's every nth iteration:
     if(i > burnin && i % nth == 0) {
+
+      // Printing the value of i
+      Rprintf("%d \n", i);
+
+      // Updating the m^th row to fill the relevant matrices using pushback etc.:
       m = mlscale.n_rows;
-      
+
       // Writing all the values at each selected cycle for the scale:
       mlscale.insert_rows(m, prop_mlscale.t());
       alpha_scale.insert_rows(m, prop_alpha_scale.t());
@@ -1419,10 +1453,10 @@ List mcmcC(List data,
       tausq_scale.push_back(prop_tausq_scale);
       nu_scale.push_back(prop_nu_scale);
       nlscale.insert_rows(m, prop_nlscale.t());
-      
+
       // Checking the values of the cube used for the scale update:
       cube_scale_counter.push_back(ind1);
-      
+
       // Writing all the values at each selected cycle for the shape:
       mshape.insert_rows(m, prop_mshape.t());
       alpha_shape.insert_rows(m, prop_alpha_shape.t());
@@ -1431,14 +1465,14 @@ List mcmcC(List data,
       tausq_shape.push_back(prop_tausq_shape);
       nu_shape.push_back(prop_nu_shape);
       nshape.insert_rows(m, prop_nshape.t());
-      
+
       // Checking the values of the cube used for the shape update:
       cube_shape_counter.push_back(ind2);
-      
+
     }
-    
+
   }
-  
+
   //////////////////////////// Getting ready to output results: //////////////////////
   // Writing each element of the list:
   out[0] = exp(mlscale);
@@ -1478,11 +1512,11 @@ List mcmcC(List data,
   out[26] = acc_nu_scale/iterations;
   out[27] = acc_nu_shape/iterations;
   
-  out[28] = cube_covar_scale; // 0;
-  out[29] = cube_covar_shape; // 0;
+  out[28] = cube_covar_scale; // 0; fill in 0 here if these objects become too big
+  out[29] = cube_covar_shape; // 0; fill in 0 here if these objects become too big
   
-  out[30] = cube_nxm_scale; // 0;
-  out[31] = cube_nxm_shape; // 0;
+  out[30] = cube_nxm_scale; // 0; fill in 0 here if these objects become too big
+  out[31] = cube_nxm_shape; // 0; fill in 0 here if these objects become too big
   
   out[32] = cube_scale_counter;
   out[33] = cube_shape_counter;
@@ -1557,4 +1591,6 @@ List mcmcC(List data,
   return out;
 }
 
+///////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////// End ////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////
