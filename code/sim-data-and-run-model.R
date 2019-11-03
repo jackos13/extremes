@@ -106,7 +106,7 @@ data_master = list()
 data_master$exceedance <- data
 data_master$locations <- coords.n
 data_master$sublocations <- coords.m
-saveRDS(data_master, file = 'data_master.rds')
+saveRDS(data_master, file = '../data/data_master.rds')
 # stop()
 
 # The data is now ready to put into the MCMC function.
