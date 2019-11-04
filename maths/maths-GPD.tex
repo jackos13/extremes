@@ -169,7 +169,7 @@ The following pages include:
 \begin{figure}[H]
     \centering
        \includegraphics[width=1\textwidth,keepaspectratio]{cropped-dag.pdf}
-      \caption{A directed acyclic graph (DAG) of the Bayesian hierarchical model fitted to the spatial dataset of daily maximum temperature anomalies. On the left is the model for the excesses (using the GPD) and on the right is the model for the probability of an observation being a cluster maximum (using the Binomial distribution). The parameters of the distributions are modelled on a subgrid using Gaussian predictive processes as detailed in Section~\ref{temp:layer2}. These are represented as circles in the middle layer, with the hyperparameters controlling these represented in the top layer. The data is represented in the bottom layer (in rectangles). Arrows run into nodes from their direct predecessors (often called parents). Given its parents, each node is independent of all other nodes in the graph except its descendants (often called children). Posterior estimates of the parameters' distributions can be used to form quantities of interest - typically return levels, as illustrated. Though omitted for clarity of the diagram, it should be remembered that the three parameters ($\phi^*$, $\xi^*$, and $\zeta'$) are defined on a subgrid of the domain, but give rise to the predictive processes ($\phi$, $\xi$, and $\tilde{\zeta}$, respectively) defined on the full grid of the domain, using equation~(\ref{eqn:kriging}). Further details of each layer and the parameters involved may be found in the text and in this appendix.}
+      \caption{A directed acyclic graph (DAG) of the Bayesian hierarchical model fitted to the spatial dataset of daily maximum temperature anomalies. On the left is the model for the excesses (using the GPD) and on the right is the model for the probability of an observation being a cluster maximum (using the Binomial distribution). The parameters of the distributions are modelled on a subgrid using Gaussian predictive processes. These are represented as circles in the middle layer, with the hyperparameters controlling these represented in the top layer. The data is represented in the bottom layer (in rectangles). Arrows run into nodes from their direct predecessors (often called parents). Given its parents, each node is independent of all other nodes in the graph except its descendants (often called children). Posterior estimates of the parameters' distributions can be used to form quantities of interest - typically return levels, as illustrated. Though omitted for clarity of the diagram, it should be remembered that the three parameters ($\phi^*$, $\xi^*$, and $\zeta'$) are defined on a subgrid of the domain, but give rise to the predictive processes ($\phi$, $\xi$, and $\tilde{\zeta}$, respectively) defined on the full grid of the domain. Further details of each layer and the parameters involved may be found below.}
       \label{fig:DAG3}
 \end{figure}
 
@@ -218,7 +218,7 @@ In the above formulae for $A, B, \Sigma, \text{and} \Psi$, $\beta_\phi$ and $\be
 \\
 
 \clearpage
-Hyperparameter prior distributions (justifications for these values can be found in Section~\ref{layer:hyper}):
+Hyperparameter prior distributions:
 \begin{align*}
 \log(\varsigma^2_\phi), \log(\varsigma^2_\xi)&\sim N(0, 1) \\
 \log(\tau^2_\phi), \log(\tau^2_\xi) &\sim N(-2.3, 1) \\
