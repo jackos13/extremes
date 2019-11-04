@@ -2,6 +2,9 @@
 ################################# Run Model ################################################
 ############################################################################################
 
+# Set working directory to folder containing this file,
+# which has 'scripts' folder in it and an empty folder called 'cubes' in it too
+
 # Clear workspace
 rm(list = ls())
 
@@ -24,11 +27,11 @@ set.seed(13)
 # Get the address:
 address <- getwd()
 
-# Source the Rcpp code:
-Rcpp::sourceCpp(paste0(address,'/pp-script.cpp'))
+# Source the Rcpp code (namespaces warning can be ignored):
+Rcpp::sourceCpp(paste0(address,'/scripts/pp-script-gpd.cpp'))
 
 # Source the R script with functions to prepare the data:
-source(paste0(address,'/prepare-data.R'))
+source(paste0(address,'/scripts/prepare-data.R'))
 
 # Set grid dimension (increase grid_len for a larger grid):
 grid_len <- 6
@@ -106,7 +109,7 @@ data_master = list()
 data_master$exceedance <- data
 data_master$locations <- coords.n
 data_master$sublocations <- coords.m
-saveRDS(data_master, file = '../data/data_master.rds')
+saveRDS(data_master, file = 'data_master.rds')
 # stop()
 
 # The data is now ready to put into the MCMC function.
@@ -332,6 +335,259 @@ print(paste0('True value = ', nu.phi))
 # Table for nu for the shape:
 table(chainC$nu_shape)
 print(paste0('True value = ', nu.xi))
+
+##########################################################################################
+# End
+##########################################################################################
+
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% #
+
+############################################################################################
+################################# Binomial Model Run #######################################
+############################################################################################
+
+# Clear everything
+rm(list=ls())
+
+# Required packages:
+if (!require("mgcv")) install.packages("mgcv")
+if (!require("tidyverse")) install.packages("tidyverse")
+if (!require("fExtremes")) install.packages("fExtremes")
+if (!require("Rcpp")) install.packages("Rcpp")
+if (!require("RcppArmadillo")) install.packages("RcppArmadillo")
+
+library(mgcv)
+library(tidyverse)
+library(fExtremes)
+library(Rcpp)
+library(RcppArmadillo)
+
+# Set the seed for reproducible results
+set.seed(13)
+
+# Get the address:
+address <- getwd()
+
+# Source the Rcpp code (namespaces warning and uninitialised warning can be ignored):
+Rcpp::sourceCpp(paste0(address,'/scripts/pp-script-binom.cpp'))
+
+# Source the R script with functions to prepare the data:
+source(paste0(address,'/scripts/prepare-data.R'))
+
+# Set grid dimension (increase grid_len for a larger grid):
+grid_len <- 6
+x1 <- seq(-1, 1, length.out = grid_len)
+x <- as.matrix(expand.grid(x1, x1))
+
+# Spatial dimension (number of gridpoints):
+n <- nrow(x)
+
+# A vector of indexes saying which points are kept in the subgrid
+# Run the commented line to keep all points (subgrid = full grid)
+# Change k - here, it's every 2nd point. 3 = every 3rd point etc.
+# xx <- rep(1, nrow(x))
+k <- 2
+xx <- rep(c(rep(0, k-1), 1), ceiling(n/k))[1:n]
+
+###############################################################
+# Setting x to be coords.n and z to be coords.m:
+coords.n <- as.matrix(x)
+coords.m <- z <- coords.n[xx==1,]
+# Get the dimension of the subgrid:
+m <- nrow(coords.m)
+
+# Set hyperparameters (adjust as desired):
+alpha.zeta <- c(0, -0.1, 0.1)
+beta.zeta <- diag(c(10, 10))
+nu.zeta <- 2.5
+varsigma2.zeta <- 1
+tau2.zeta <- 0.1
+
+# Calculate Sigma:
+dist.list <- dist_mat_diff(as.matrix(x), as.matrix(x))
+Sigma <- matrix(NA, nrow=nrow(x), ncol=nrow(x))
+
+# Filling these one-by-one:
+for(i in 1:nrow(Sigma)) {
+  for(j in 1:ncol(Sigma)) {
+    Sigma[i,j] <- matern_cpp(varsigma2.zeta, nu.zeta, dist.list[[i]][j,], solve(beta.zeta), tau2.zeta)
+  }
+}
+
+# Getting the mean of the GP:
+X <- cbind(1, x)
+mu.zeta <- as.matrix(X) %*% alpha.zeta
+
+# Simulating the surfaces phi and xi:
+zeta <- t(rmvn(1, t(mu.zeta), Sigma))
+
+# Simulate some random values from the Binomial based on these
+# remembering the transformtation needed:
+data <- vector('list', length=nrow(x))
+N1 <- 3650 # A decade of daily obs, say
+
+for(i in 1:length(data)) {
+  data[[i]] <- rbinom(1, N1, prob = exp(zeta[i]) / (1 + exp(zeta[i])))
+}
+data <- lapply(data, as.vector)
+
+# Save the data set at this point so that we have everything to hand
+# The list of the number of exceedances
+# The locations
+# The sub-locations (optional, part of the modelling choice)
+data_master = list()
+data_master$frequency <- data
+data_master$locations <- coords.n
+data_master$sublocations <- coords.m
+saveRDS(data_master, file = 'data_master2.rds')
+# stop()
+
+# The data is now ready to put into the MCMC function.
+# Now to set everything else up:
+# It needs the following:
+# vec counts, List big_beta, mat big_beta_mat, vec total_obs, List start, int iterations, mat covar1,
+# mat bigcovar1, mat distance_vectors_n, mat distance_vectors_m, int dimension, List step, List prior,
+# int burnin, int nth, int n_dim, int m_dim, vec ind_m
+
+# A list of all possible numbers in the beta matrices:
+beta.vec <- c(0, 0.05, 1, 10)
+
+# Getting the dimension of beta, which is essentially
+# the number of spatial coordinates - lat, lon, (elevation possibly too)
+spatial.dim <- ncol(x)
+
+# Using a function to calculate all possible matrices beta,
+# keeping only those which are symmetric and positive definite, and returning them
+# as a list and as a matrix:
+list1 <- get_betas2(beta.vec, spatial.dim)
+big_beta <- list1[[1]]
+big_beta_mat <- list1[[2]]
+
+# Now making the matrix of covariates X,
+bigcov1 <- as.matrix(cbind(1, x))
+
+# And the matrix of covariates Z for the reduced grid:
+cov1 <- as.matrix(cbind(1, x[xx==1,]))
+dim.cov1 <- ncol(cov1)
+
+###############################################################
+# Set the prior parameters
+# (a few of these are now redundant, but the ordering is needed, so they're left in for ease
+# e.g., some are from when parameters were continuous then moved to discrete etc.)
+# Adjust these as desired
+prior <- list('alpha_zeta_hyper_mean'  = c(rep(0, dim.cov1)),
+              'alpha_zeta_hyper_sd'    = diag(rep(10, dim.cov1)),
+              'beta_zeta_prior'        = 0,
+              'sigsq_zeta_hyper_mean'  = 0,
+              'sigsq_zeta_hyper_sd'    = 1,
+              'tausq_zeta_hyper_mean'  = -2.3,
+              
+              'tausq_zeta_hyper_sd'    = 0.5, # or log(0.5)
+              'nu_zeta_hyper_mean'     = 0,
+              'nu_zeta_hyper_sd'       = 2,
+              
+              'nu_zeta_hyper_discrete' = seq(0.5, 2.5, by=2))
+
+###############################################################
+# Define the starting values for the algorithm:
+# (These are flexible to changes)
+vec_counts <- as.vector(unlist(data))
+vec_total_obs <- rep(N1, nrow(x))
+
+# Define the starting values for the algorithm:
+start.prob <- vec_counts / vec_total_obs
+start.prob.m <- start.prob[xx==1]
+
+start <- list('zeta'              = log(start.prob.m),
+              'alpha_zeta'         = runif(dim.cov1),
+              'beta_zeta'          = diag(1, spatial.dim),  
+              'sigsq_zeta'         = 1,                    
+              'tausq_zeta'         = 0,
+              
+              'nzeta'             = log(start.prob),
+              "nu_zeta" = 0.5)
+
+# Creating the cubes necessary for the discrete updates of beta and nu:
+addresses <- c(paste0('cubes/binom_cube1.cube'),
+               paste0('cubes/binom_big_cube1.cube'))
+
+save_cubes2(addresses, coords.m, coords.n, big_beta, prior, start) # save_cubes is in the R code in the prepare-data script
+
+# Get appropriate starting values (needed on bigger grids):
+# start <- find.init2(start, it.max=100, addresses, m, n, data, vec_counts, vec_total_obs,
+#                    bigcov1, cov1)
+
+# Now to reset the tausq parameter after the cubes have been created:
+start$tausq_zeta <- 0.1
+
+# Define the steps used. These need to be adjusted to 'tune' the algorithm:
+step <- list('zeta_step'      = 0.04,
+             'alpha_zeta_step' = c(1.5, 0.8, 0.8, 0.04),
+             'sigsq_zeta_step' = 0.8,
+             'tausq_zeta_step' = 0.8,
+             'nu_zeta_step' = 0.1)
+
+# ind_m is used to update across the grid in a random order, for each iteration i
+ind_m <- 0:(m-1)
+
+# Setting the number of iterations, the burnin and the n^th value to save
+iterations <- 1e4
+burnin <- 1e3
+nth <- 1e1
+
+###############################################################
+# Run the code:
+chainC <- mcmc_binom_C(vec_counts, big_beta, big_beta_mat, vec_total_obs,
+                       start, iterations, cov1, bigcov1,
+                       coords.n, coords.m, spatial.dim, step, prior,
+                       burnin, nth, n, m, ind_m)
+
+# save(chainC, file="chain.RData")
+# break()
+# load("chain.RData")
+
+# 1e4 is probably enough to see if the steps need adjusting
+chainC$acc_zeta
+chainC$acc_alpha_zeta
+chainC$acc_sigsq_zeta
+chainC$acc_tausq_zeta
+# 1e5 should be enough to converge
+
+##########################################################################################
+# Analysis plots:
+##########################################################################################
+
+# In all plots below, where vertical/horizontal lines
+# are overlain, red is the known value and black is the posterior mean 
+
+# Plotting the alpha_zeta parameters:
+par(mfrow=c(1, ncol(chainC$alpha_zeta)))
+for(i in 1:ncol(chainC$alpha_zeta)) {
+  plot(chainC$alpha_zeta[,i], type="l")
+  abline(h=alpha.zeta[i], col="red")
+  abline(h=mean(chainC$alpha_zeta[,i]), col="black")
+}
+
+# Printing the table and actual beta_zeta values from the matrix:
+for(i in 1:ncol(chainC$beta_zeta)) {
+  print(table(chainC$beta_zeta[,i]))
+  print(paste0('True value of beta.phi = ', beta.zeta[i]))
+}
+
+# Histogram for varsigma^2 for zeta:
+par(mfrow=c(1, 1))
+hist(chainC$sigsq_zeta)
+abline(v=varsigma2.zeta, col="red")
+abline(v=mean(chainC$sigsq_zeta), col="black")
+
+# Histogram for tau^2 for the scale:
+hist(chainC$tausq_zeta)
+abline(v=tau2.zeta, col="red")
+abline(v=mean(chainC$tausq_zeta), col="black")
+
+# Table for nu for the scale:
+table(chainC$nu_zeta)
+print(paste0('True value = ', nu.zeta))
 
 ##########################################################################################
 # End
